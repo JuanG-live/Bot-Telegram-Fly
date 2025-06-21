@@ -1,9 +1,12 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
+import os
+from dotenv import load_dotenv
+import asyncio
 
-# Reemplaza 'TU_TOKEN_DEL_BOT' con el token que te dio BotFatherr
-# ¡Importante: No compartas tu token públicamente!
-TOKEN = '7811585862:AAFJlaeCbCnrbBkeLFq28UyRgzqA1lhlxUA' # <--- Pega tu token aquí
+load_dotenv()
+
+TOKEN = os.getenv('BOT_TOKEN')
 
 # Función que se ejecuta cuando el usuario envía el comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
