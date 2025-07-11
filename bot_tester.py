@@ -6,7 +6,7 @@ import asyncio
 import threading
 from level_api import get_month_prices
 from telegram import Bot
-
+from dateutil.relativedelta import relativedelta
 load_dotenv()
 
 TOKEN = os.getenv('BOT_TOKEN')
@@ -27,19 +27,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 # Tarea de fondo para verificar ofertas cada 60 segundos
 async def verificar_ofertas(bot: Bot, chat_id: str):
     while True:
-        print("Checking for cheap flights...")
+        print("Buscando vuelos baratos cada 60 segundos...")
         result = get_month_prices(
             origin="EZE",
             dest="DUB",
-            outbound="2025-08-10",
+            outbound="10-08-2025",
             year=2025,
             month=8
         )
         for vuelo in result:
             price = vuelo.get("price")
             date = vuelo.get("date")
-            if price and price < 250:
+            if price and price < 1500:
                 msg = f"🔥 ¡VUELO BARATO!\nFecha: {date}\nPrecio: €{price}\nDesde: EZE\nHacia: DUB"
+                print(msg)
                 await bot.send_message(chat_id=chat_id, text=msg)
 
         await asyncio.sleep(60)
@@ -72,7 +73,7 @@ def main() -> None:
     )
     t.start()
 
-    print("Bot iniciado. Presiona Ctrl-C para detenerlo.")
+    print("Bot iniciado. Presiona Ctrl-C para detenerlo.\n")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
