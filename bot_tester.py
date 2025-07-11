@@ -6,10 +6,13 @@ import asyncio
 import threading
 from level_api import get_month_prices
 from telegram import Bot
+from datetime import datetime
 from dateutil.relativedelta import relativedelta
+
 load_dotenv()
 
-TOKEN = os.getenv('BOT_TOKEN')
+TOKEN = os.getenv("BOT_TOKEN")
+
 
 # Función que se ejecuta cuando el usuario envía el comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -24,26 +27,42 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         await update.message.reply_text("¡Hola! Soy tu bot de alertas de vuelos.")
 
+
+today = datetime.now()
+month_To_Check = [
+    ((today + relativedelta(months=i)).month, (today + relativedelta(months=i)).year)
+    for i in range(3)
+]
+
+
 # Tarea de fondo para verificar ofertas cada 60 segundos
 async def verificar_ofertas(bot: Bot, chat_id: str):
     while True:
-        print("Buscando vuelos baratos cada 60 segundos...")
-        result = get_month_prices(
-            origin="EZE",
-            dest="DUB",
-            outbound="10-08-2025",
-            year=2025,
-            month=8
-        )
-        for vuelo in result:
-            price = vuelo.get("price")
-            date = vuelo.get("date")
-            if price and price < 1500:
-                msg = f"🔥 ¡VUELO BARATO!\nFecha: {date}\nPrecio: €{price}\nDesde: EZE\nHacia: DUB"
-                print(msg)
-                await bot.send_message(chat_id=chat_id, text=msg)
+        try:
+            for year, month in month_To_Check:
+                print(f"Buscando vuelos baratos para {year}-{month:02d}...")
+                result = get_month_prices(
+                    origin="EZE",
+                    dest="DUB",
+                    outbound=f"{year}-{month:02d}-01",
+                    year=year,
+                    month=month,
+                )
+            for vuelo in result:
+                price = vuelo.get("price")
+                date = vuelo.get("date")
+                if price and price < 1500:
+                    msg = f"🔥 ¡VUELO BARATO!\nFecha: {date}\nPrecio: €{price}\nDesde: EZE\nHacia: DUB"
+                    print(msg)
+                    await bot.send_message(chat_id=chat_id, text=msg)
+
+        except Exception as e:
+            msgError = f"⚠️ Error de búsqueda {month:02d}-{year}: {e}"
+            print(msgError)
+            await bot.send_message(chat_id=chat_id, text=msgError)
 
         await asyncio.sleep(60)
+
 
 def start_background_loop(loop, bot, chat_id):
     asyncio.set_event_loop(loop)
@@ -67,14 +86,13 @@ def main() -> None:
 
     loop = asyncio.new_event_loop()
     t = threading.Thread(
-        target=start_background_loop,
-        args=(loop, bot, chat_id),
-        daemon=True
+        target=start_background_loop, args=(loop, bot, chat_id), daemon=True
     )
     t.start()
 
     print("Bot iniciado. Presiona Ctrl-C para detenerlo.\n")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
+
 
 if __name__ == "__main__":
     main()
