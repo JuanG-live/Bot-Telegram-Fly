@@ -27,8 +27,8 @@ Ideal para los que buscan 🛫 **volar por menos de €250** sin perderse las me
 ## ⚙️ Instalación
 
 ```bash
-git clone https://github.com/tuusuario/cheap-flight-alerts-bot.git
-cd cheap-flight-alerts-bot
+git clone https://github.com/JuanG-live/Bot-Telegram-Fly.git
+cd Bot-Telegram-Fly
 python -m venv venv
 source venv/bin/activate  # o .\venv\Scripts\activate en Windows
 pip install -r requirements.txt
