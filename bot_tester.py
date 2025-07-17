@@ -28,31 +28,45 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("¡Hola! Soy tu bot de alertas de vuelos.")
 
 
-today = datetime.now()
-month_To_Check = [
-    ((today + relativedelta(months=i)).month, (today + relativedelta(months=i)).year)
-    for i in range(3)
-]
+def get_next_three_months():
+    today = datetime.now()
+    end_date = today + relativedelta(days=90)
+
+    month_To_Check = []
+    current = today.replace(day=1)
+    while current <= end_date:
+        month_To_Check.append((current.year, current.month))
+        current += relativedelta(months=1)
+    return month_To_Check
 
 
 # Tarea de fondo para verificar ofertas cada 60 segundos
 async def verificar_ofertas(bot: Bot, chat_id: str):
+    destinations = ["DUB", "MAD", "BCN", "FCO"]
     while True:
         try:
-            for year, month in month_To_Check:
-                print(f"Buscando vuelos baratos para {year}-{month:02d}...")
-                result = get_month_prices(
-                    origin="EZE",
-                    dest="DUB",
-                    outbound=f"{year}-{month:02d}-01",
-                    year=year,
-                    month=month,
-                )
+            for year, month in get_next_three_months():
+                for dest in destinations:
+                    print(
+                        f"Buscando vuelos baratos desde EZE -> {dest} Fecha aproximada: {year}-{month:02d}..."
+                    )
+                    result = get_month_prices(
+                        origin="EZE",
+                        dest=dest,
+                        outbound=f"{year}-{month:02d}-01",
+                        year=year,
+                        month=month,
+                    )
             for vuelo in result:
+                print(vuelo)
                 price = vuelo.get("price")
                 date = vuelo.get("date")
-                if price and price < 1500:
-                    msg = f"🔥 ¡VUELO BARATO!\nFecha: {date}\nPrecio: €{price}\nDesde: EZE\nHacia: DUB"
+                if price and price < 850:
+                    msg = f"🔥 ¡VUELO BARATO!\n"
+                    msg += f"Fecha: {date}\n"
+                    msg += f"Precio: €{price}\n"
+                    msg += f"Desde: EZE\n"
+                    msg += f"Hacia: {dest}"
                     print(msg)
                     await bot.send_message(chat_id=chat_id, text=msg)
 
@@ -63,7 +77,7 @@ async def verificar_ofertas(bot: Bot, chat_id: str):
 
         await asyncio.sleep(60)
 
-
+        
 def start_background_loop(loop, bot, chat_id):
     asyncio.set_event_loop(loop)
     loop.run_until_complete(verificar_ofertas(bot, chat_id))

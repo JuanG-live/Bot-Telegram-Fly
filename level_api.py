@@ -15,13 +15,21 @@ def get_month_prices(origin, dest, outbound, year, month, cur="EUR"):
         "currencyCode": cur
     }
     headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Accept": "application/json",
-        "Referer": "https://www.flylevel.com/"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/javascript, */*; q=0.01",
+        "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
+        "Referer": "https://www.flylevel.com/",
+        "Origin": "https://www.flylevel.com"
     }
     r = requests.get(BASE, params=params, headers=headers, timeout=20)
-    r.raise_for_status()
-    return r.json()["data"]["dayPrices"]
+    try:
+        r.raise_for_status()
+        data = r.json()
+        print(data)
+        return data.get("data", {}).get("dayPrices", [])
+    except Exception as e:
+        print(f"Error fetching prices: {e}")
+        return []
 
 def cheapest_day(origin, dest, outbound, year, month):
     return min(
