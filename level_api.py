@@ -1,7 +1,7 @@
 # level_api.py
 import requests 
 from operator import itemgetter
-
+import json
 BASE = "https://www.flylevel.com/nwe/flights/api/calendar/"
 
 def get_month_prices(origin, dest, outbound, year, month, cur="EUR"):
@@ -25,7 +25,7 @@ def get_month_prices(origin, dest, outbound, year, month, cur="EUR"):
     try:
         r.raise_for_status()
         data = r.json()
-        print(data)
+        print(json.dumps(data, indent=2))
         return data.get("data", {}).get("dayPrices", [])
     except Exception as e:
         print(f"Error fetching prices: {e}")
