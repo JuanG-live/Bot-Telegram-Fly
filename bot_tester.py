@@ -7,9 +7,11 @@ from level_api import get_month_prices
 from telegram import Bot
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+import json
 load_dotenv()
 
 TOKEN = os.getenv("BOT_TOKEN")
+ARCHIVO_VUELOS = "vuelos.json"
 
 
 # Función que se ejecuta cuando el usuario envía el comando /start
@@ -37,6 +39,29 @@ def get_next_three_months():
         current += relativedelta(months=1)
     return month_To_Check
 
+#Funcion para guardar los vuelos en un archivo json
+def guardar_vuelos_json(vuelo):
+    if not os.path.exists(ARCHIVO_VUELOS):
+        with open(ARCHIVO_VUELOS, "w") as f:
+            json.dump([], f) #Si el archivo no existe, se crea con una lista vacía
+
+    with open(ARCHIVO_VUELOS, "r") as f:
+        vuelos_guardados = json.load(f) #Cargamos los vuelos guardados
+    vuelos_guardados.append(vuelo) #Agregamos el vuelo a la lista de vuelos guardados
+    with open(ARCHIVO_VUELOS, "w") as f:
+        json.dump(vuelos_guardados, f) #Guardamos los vuelos en el archivo
+    return True
+
+#Funcion para verificar si el vuelo ya esta guardado por fecha y destino
+def vuelos_existentes(vuelo):
+    if not os.path.exists(ARCHIVO_VUELOS):
+        return False
+    with open(ARCHIVO_VUELOS, "r") as f:
+        vuelos_guardados = json.load(f)
+        for vuelo_guardado in vuelos_guardados:
+            if vuelo_guardado["date"] == vuelo["date"] and vuelo_guardado["dest"] == vuelo["dest"] and vuelo_guardado["price"] == vuelo["price"]:
+                return True
+    return False
 
 # Tarea de fondo para verificar ofertas cada 60 segundos
 async def verificar_ofertas(context: ContextTypes.DEFAULT_TYPE):
@@ -64,12 +89,13 @@ async def verificar_ofertas(context: ContextTypes.DEFAULT_TYPE):
                     print(vuelo)
                     price = vuelo.get("price")
                     date = vuelo.get("date")
-                    if price and price < 500:
-                        msg = f"🔥 ¡VUELO BARATO!\n"
-                        msg += f"Fecha: {date}\n"
-                        msg += f"Precio: €{price}\n"
-                        msg += f"Desde: EZE\n"
-                        msg += f"Hacia: {dest}"
+                    if price and price < 800:
+                        if not vuelos_existentes(vuelo):
+                            guardar_vuelos_json(vuelo)
+                            msg = f"✈️ ALERTA DE PRECIO BAJO ✈️\n\n"
+                            msg += f"🗓️ Fecha: {date}\n"
+                            msg += f"💶 Precio: €{price}\n"
+                            msg += f"📍 Ruta: EZE ➡️ {dest}"
                         print(msg)
                         await bot.send_message(chat_id=chat_id, text=msg)
 
