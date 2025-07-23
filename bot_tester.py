@@ -8,6 +8,7 @@ from telegram import Bot
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import json
+import time
 load_dotenv()
 
 TOKEN = os.getenv("BOT_TOKEN")
@@ -31,7 +32,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 def get_next_three_months():
     today = datetime.now()
     end_date = today + relativedelta(days=90)
-
     month_To_Check = []
     current = today.replace(day=1)
     while current <= end_date:
@@ -72,12 +72,14 @@ async def verificar_ofertas(context: ContextTypes.DEFAULT_TYPE):
     chat_id = int(chat_id)
     destinations = ["DUB", "MAD", "BCN", "FCO"]
 
-    try:
-        for year, month in get_next_three_months():
-            for dest in destinations:
-                print(
-                    f"Buscando vuelos baratos desde EZE -> {dest} Fecha aproximada: {year}-{month:02d}..."
-                )
+    print("⏱️ Empezando ejecución completa")
+    start_total = time.time()
+
+    for year, month in get_next_three_months():
+        for dest in destinations:
+            try:
+                print(f"🌍 Consultando: {dest} {year}-{month}")
+                start = time.time()
                 result = get_month_prices(
                     origin="EZE",
                     dest=dest,
@@ -85,30 +87,36 @@ async def verificar_ofertas(context: ContextTypes.DEFAULT_TYPE):
                     year=year,
                     month=month,
                 )
+                print(f"⏳ Duración get_month_prices: {time.time() - start:.2f}s")
+
                 for vuelo in result:
+                    vuelo["dest"] = dest
                     print(vuelo)
                     price = vuelo.get("price")
                     date = vuelo.get("date")
                     if price and price < 800:
                         if not vuelos_existentes(vuelo):
                             guardar_vuelos_json(vuelo)
-                            msg = f"✈️ ALERTA DE PRECIO BAJO ✈️\n\n"
-                            msg += f"🗓️ Fecha: {date}\n"
-                            msg += f"💶 Precio: €{price}\n"
-                            msg += f"📍 Ruta: EZE ➡️ {dest}"
-                        print(msg)
-                        await bot.send_message(chat_id=chat_id, text=msg)
+                            msg = (
+                                f"✈️ ALERTA DE PRECIO BAJO ✈️\n\n"
+                                f"🗓️ Fecha: {date}\n"
+                                f"💶 Precio: €{price}\n"
+                                f"📍 Ruta: EZE ➡️ {dest}"
+                            )
+                            print(msg)
+                            await bot.send_message(chat_id=chat_id, text=msg)
+                        else:
+                            print(f"🟡 Vuelo ya guardado: {vuelo}")
+            except Exception as e:
+                msgError = f"⚠️ Error en {dest} {month:02d}-{year}: {e}"
+                print(msgError)
+                await bot.send_message(chat_id=chat_id, text=msgError)
 
-    except Exception as e:
-        msgError = f"⚠️-Error de búsqueda {month:02d}-{year}: {e}"
-        print(msgError)
-        await bot.send_message(chat_id=chat_id, text=msgError)
-
-    await asyncio.sleep(60)
-
+    print(f"✅ Ejecución completa en {time.time() - start_total:.2f}s")
+    
 
 async def post_init(application):
-    application.job_queue.run_repeating(verificar_ofertas, interval=60)
+    application.job_queue.run_repeating(verificar_ofertas, interval=300)
 
 
 # Función principal para iniciar el bot
