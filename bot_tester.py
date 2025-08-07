@@ -65,6 +65,7 @@ def vuelos_existentes(vuelo):
 
 # Tarea de fondo para verificar ofertas cada 60 segundos
 async def verificar_ofertas(context: ContextTypes.DEFAULT_TYPE):
+    print("🔔 [INICIO] verificar_ofertas() arrancó en tiempo real")
     bot = context.bot
     chat_id = os.getenv("CHAT_ID")
     if not chat_id:
@@ -117,6 +118,8 @@ async def verificar_ofertas(context: ContextTypes.DEFAULT_TYPE):
 
 async def post_init(application):
     application.job_queue.run_repeating(verificar_ofertas, interval=300)
+    await verificar_ofertas(application)  # ⬅️ Ejecutás una vez manualmente
+
 
 
 # Función principal para iniciar el bot
