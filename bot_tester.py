@@ -1,3 +1,4 @@
+from sys import float_repr_style
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 import os
@@ -13,10 +14,14 @@ load_dotenv()
 
 TOKEN = os.getenv("BOT_TOKEN")
 ARCHIVO_VUELOS = "vuelos.json"
+ARCHIVO_CHAT_ID = "chat_ids.json"
 
 
 # Función que se ejecuta cuando el usuario envía el comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_chat.id
+    ok = guardar_chat_id(chat_id)
+    print(f"[START] chat_id={chat_id} guardado={ok}")
     if not update.message:
         return
     user = update.effective_user
@@ -56,10 +61,10 @@ def guardar_vuelos_json(vuelo):
 def vuelos_existentes(vuelo):
     if not os.path.exists(ARCHIVO_VUELOS):
         return False
-    with open(ARCHIVO_VUELOS, "r") as f:
-        vuelos_guardados = json.load(f)
-        for vuelo_guardado in vuelos_guardados:
-            if vuelo_guardado["date"] == vuelo["date"] and vuelo_guardado["dest"] == vuelo["dest"] and vuelo_guardado["price"] == vuelo["price"]:
+    with open(ARCHIVO_VUELOS, "r") as f: #Abrimos el archivo de vuelos
+        vuelos_guardados = json.load(f) #Cargamos los vuelos guardados
+        for vuelo_guardado in vuelos_guardados: #Recorremos los vuelos guardados
+            if vuelo_guardado["date"] == vuelo["date"] and vuelo_guardado["dest"] == vuelo["dest"] and vuelo_guardado["price"] == vuelo["price"]: #Si el vuelo ya esta guardado, retornamos True
                 return True
     return False
 
@@ -72,10 +77,8 @@ async def verificar_ofertas(context: ContextTypes.DEFAULT_TYPE):
         raise ValueError("❌ CHAT_ID is not defined in the .env file")
     chat_id = int(chat_id)
     destinations = ["DUB", "MAD", "BCN", "FCO"]
-
     print("⏱️ Empezando ejecución completa")
     start_total = time.time()
-
     for year, month in get_next_three_months():
         for dest in destinations:
             try:
@@ -114,7 +117,28 @@ async def verificar_ofertas(context: ContextTypes.DEFAULT_TYPE):
                 await bot.send_message(chat_id=chat_id, text=msgError)
 
     print(f"✅ Ejecución completa en {time.time() - start_total:.2f}s")
-    
+
+#Funcion para guardar el chat_id en un archivo json
+def guardar_chat_id(chat_id):
+    chat_id = int(chat_id)
+    if not os.path.exists(ARCHIVO_CHAT_ID):
+        with open(ARCHIVO_CHAT_ID, "w") as f:
+            json.dump([], f)
+    with open(ARCHIVO_CHAT_ID, "r") as f:
+        chat_ids = json.load(f)
+        if chat_id not in chat_ids:
+            chat_ids.append(chat_id)
+    with open(ARCHIVO_CHAT_ID, "w") as f:
+        json.dump(chat_ids, f)
+    return True
+
+#Funcion para verificar si el chat_id ya esta guardado
+def chat_id_existente(chat_id):
+    if not os.path.exists(ARCHIVO_CHAT_ID):
+        return False
+    with open(ARCHIVO_CHAT_ID, "r") as f:
+        chat_ids = json.load(f)
+        return chat_id in chat_ids
 
 async def post_init(application):
     application.job_queue.run_repeating(verificar_ofertas, interval=300)
